@@ -1,0 +1,161 @@
+---
+title: "TimeSeries Assignment11"
+author: "Venkat Kasarla"
+date: "11/30/2017"  
+output: 
+    html_document:
+          keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("dygraphs")
+library("forecast")
+library("fpp2")
+library("xts")
+library("dplyr")
+```
+## Presented by  Venkat Kasarla 
+
+<br>
+
+# Introduction
+Present the answrs to the TimeSeries data questions for time series data sets.
+
+<br>
+
+###  1.a Pull the DAX  index
+
+```{r missmatch, echo=TRUE}
+help(EuStockMarkets) 
+dax <- EuStockMarkets[,"DAX"]
+```
+
+<br>
+
+### 1.b plot data and   add a vertical red line to your plot which divides pre-1997 and post-1997 
+
+
+```{r daxIndex}
+plot(dax,main="Stock Data", sub="DAX Index",xlab="Year", ylab="Stock Value")
+abline(v=1997, col="red")
+plot(EuStockMarkets,main="European Stock Data",xlab="Year", ylab="Stock Value")
+abline(v=1997, col="red")
+```
+
+
+<br>
+
+### 1.c Decompose the time series into its components
+
+
+```{r Decompose}
+dax.comp <- decompose(dax, type="mult")
+plot(dax.comp)
+#HoltWinters filtering on indices
+dax.hw <- HoltWinters(dax)
+
+plot(dax.hw,main="Stock Data", sub="DAX Index",xlab="Year", ylab="Stock Value")
+```
+
+
+<br>
+
+### 2.a  load fpp2 and look at ffp2 temperature dataset
+
+
+```{r  loadfpp2 }
+help(maxtemp)
+??maxtemp
+```
+
+### 2.b Subset after 1990 year
+
+
+```{r subsetfrom1991}
+temp.data<-window(maxtemp, start=1991,initial=c("optimal"))
+```
+
+<br>
+
+### c SES to predict the next five years of maximum temperatures in Melbourne. plot this infromation
+
+
+```{r SES}
+plot(temp.data,main="Max Temp Data",xlab="Year", ylab="max tempValue")
+fcast.ses <- ses(temp.data,h=5)
+plot(fcast.ses,main="Max Temp Data",xlab="Year", ylab="max tempValue")
+```
+
+<br>
+
+### 2.d damped Holt’s linear trend to also predict out five years
+
+
+```{r holt}
+fcast.holt <- holt(temp.data,h=5,initial=c("optimal"),damped=TRUE)
+plot(fcast.holt,main="Max Temp Data",xlab="Year", ylab="max tempValue")
+```
+
+
+<br>
+
+
+### 2.e Compare the AICc - Best value in models is to choose the one with the minimum AIC value.SES perefed as it has Low AICc value
+
+
+```{r AICc}
+summary(fcast.ses)
+summary(fcast.holt)
+```
+
+### 3.a Read the files and rename columns to meaningful name
+
+
+```{r readRename}
+ts.gregorovitch <-  read.csv('../data/Unit11TimeSeries_Gregorovitch.csv')
+ts.ollivander <-  read.csv('../data/Unit11TimeSeries_Ollivander.csv')
+
+colnames(ts.gregorovitch) <- c("Date","WandsSold")
+colnames(ts.ollivander) <- c("Date","WandsSold")
+```
+
+<br>
+
+### 3.b covert to Date class
+
+
+```{r converDate}
+ts.gregorovitch$Date <- as.Date(ts.gregorovitch$Date , "%m/%d/%y")
+ts.ollivander$Date <- as.Date(ts.ollivander$Date , "%m/%d/%y")
+```
+
+<br>
+
+### 3.c make each data frame an xts object 
+
+
+```{r createXts}
+greg.xts <- xts(ts.gregorovitch$WandsSold,ts.gregorovitch$Date,order.by = ts.gregorovitch$Date )
+olliv.xts <- xts(ts.ollivander$WandsSold,ts.ollivander$Date,order.by = ts.ollivander$Date )
+```
+
+<br>
+
+### 3.d Bind the two xts objects together and create a dygraph
+
+
+```{r dygraph}
+ollivander <- ts(log(olliv.xts), start = start(olliv.xts), end = end(olliv.xts), frequency = 1)
+gregorovitch <- ts(log(greg.xts), start = start(greg.xts), end = end(greg.xts), frequency = 1)
+bind.dyg <- cbind(ollivander,gregorovitch)
+
+dygraph(bind.dyg) %>% dyRangeSelector(height=100) 
+
+dygraph(ollivander) %>% dyRangeSelector(height=100) %>% dyShading(from = "1955-1-1", to = "1959-1-1", color = "#CCEBD6")
+```
+
+<br>
+
+
+<br><br><br>
